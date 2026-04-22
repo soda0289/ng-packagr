@@ -5,23 +5,25 @@ import { BuildGraph } from '../../graph/build-graph';
 import { STATE_DONE } from '../../graph/node';
 import { Transform } from '../../graph/transform';
 import { cacheCompilerHost } from '../../ts/cache-compiler-host';
-import { debug } from '../../utils/log';
+import { debug, warn } from '../../utils/log';
 import { ensureUnixPath } from '../../utils/path';
 import { EntryPointNode, findPackageNode, isEntryPoint } from '../nodes';
+import { NgPackagrOptions } from '../options.di';
 
-export const analyseSourcesTransform: Transform = pipe(
-  map(graph => {
-    const entryPoints: EntryPointNode[] = graph.filter(isEntryPoint);
+export const analyseSourcesTransform = (options: NgPackagrOptions): Transform =>
+  pipe(
+    map(graph => {
+      const entryPoints: EntryPointNode[] = graph.filter(isEntryPoint);
 
-    for (const entryPoint of entryPoints) {
-      if (entryPoint.state !== STATE_DONE) {
-        analyseEntryPoint(graph, entryPoint, entryPoints);
+      for (const entryPoint of entryPoints) {
+        if (entryPoint.state !== STATE_DONE) {
+          analyseEntryPoint(graph, entryPoint, entryPoints, options);
+        }
       }
-    }
 
-    return graph;
-  }),
-);
+      return graph;
+    }),
+  );
 
 /**
  * Analyses an entrypoint, searching for TypeScript dependencies and additional resources (Templates and Stylesheets).
@@ -30,7 +32,12 @@ export const analyseSourcesTransform: Transform = pipe(
  * @param entryPoint Current entry point that should be analysed.
  * @param entryPoints List of all entry points.
  */
-function analyseEntryPoint(graph: BuildGraph, entryPoint: EntryPointNode, entryPoints: EntryPointNode[]) {
+function analyseEntryPoint(
+  graph: BuildGraph,
+  entryPoint: EntryPointNode,
+  entryPoints: EntryPointNode[],
+  options: NgPackagrOptions,
+) {
   const { oldPrograms, analysesSourcesFileCache, moduleResolutionCache } = entryPoint.cache;
   const oldProgram = oldPrograms && (oldPrograms['analysis'] as ts.Program | undefined);
   const { moduleId } = entryPoint.data.entryPoint;
@@ -156,12 +163,24 @@ function analyseEntryPoint(graph: BuildGraph, entryPoint: EntryPointNode, entryP
     if (dep) {
       debug(`Found entry point dependency: ${moduleId} -> ${moduleName}`);
 
+      const allowCircularDependencies = options.allowCircularDependencies ?? false;
+
       if (moduleId === moduleName) {
-        throw new Error(`Entry point ${moduleName} has a circular dependency on itself.`);
+        const message = `Entry point ${moduleName} has a circular dependency on itself.`;
+        if (allowCircularDependencies) {
+          warn(message);
+        } else {
+          throw new Error(message);
+        }
       }
 
       if (dep.some(n => entryPoint === n)) {
-        throw new Error(`Entry point ${moduleName} has a circular dependency on ${moduleId}.`);
+        const message = `Entry point ${moduleName} has a circular dependency on ${moduleId}.`;
+        if (allowCircularDependencies) {
+          warn(message);
+        } else {
+          throw new Error(message);
+        }
       }
 
       entryPoint.dependsOn(dep);

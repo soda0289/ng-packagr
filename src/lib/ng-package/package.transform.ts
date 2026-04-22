@@ -193,7 +193,7 @@ const scheduleEntryPoints = (epTransform: Transform, options: NgPackagrOptions):
   pipe(
     concatMap(graph => {
       // Calculate node/dependency depth and determine build order
-      const depGraph = new DepGraph({ circular: false });
+      const depGraph = new DepGraph({ circular: options.allowCircularDependencies ?? false });
       for (const node of graph.values()) {
         if (!isEntryPoint(node)) {
           continue;
