@@ -1,0 +1,12 @@
+{
+  "compilerOptions": {
+    "target": "es2022",
+    "module": "es2022",
+    "moduleResolution": "bundler",
+    "noUncheckedSideEffectImports": false,
+    "declaration": true,
+    "skipLibCheck": true,
+    "lib": ["dom", "es2022"]
+  },
+  "exclude": ["node_modules", "dist"]
+}

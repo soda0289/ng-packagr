@@ -10,6 +10,7 @@ export interface NgPackagrOptions {
   cacheEnabled?: boolean;
   cacheDirectory?: string;
   poll?: number;
+  allowCircularDependencies?: boolean;
 }
 
 export const provideOptions = (options: NgPackagrOptions = {}): ValueProvider => ({
